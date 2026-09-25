@@ -2,7 +2,6 @@ import { before, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { SKILLS_RAW } from "./site";
 import { buildSkillMd, emptyDraft, githubNewFileUrl, parseTags, rulesFromSchema, validateDraft, type Rules } from "./skill-draft";
 import type { Skill } from "./registry";
 import { filterSkills, parseFilters } from "./search";
@@ -75,15 +74,13 @@ test("splitSections: strips title, ignores headings in code, dedupes ids", () =>
   assert.equal(sections[1].body, "Again.");
 });
 
-// Tested against the real schema: from AGENT_SKILLS_DIR if set, else the published one.
+// Tested against the real schema, as pulled by `npm run registry` (or from AGENT_SKILLS_DIR).
 let RULES: Rules;
 before(async () => {
-  const dir = process.env.AGENT_SKILLS_DIR;
-  const json = dir
-    ? await readFile(join(dir, "registry/schema.json"), "utf8")
-    : await (await fetch(`${SKILLS_RAW}/registry/schema.json`)).text();
-  RULES = rulesFromSchema(JSON.parse(json));
+  const root = process.env.AGENT_SKILLS_DIR || ".registry";
+  RULES = rulesFromSchema(JSON.parse(await readFile(join(root, "registry/schema.json"), "utf8")));
 });
+
 const TAKEN = { names: ["web-research"], titles: ["Web Research"] };
 const CAT_IDS = ["research", "other"];
 const good = () => ({

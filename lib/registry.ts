@@ -1,9 +1,8 @@
-// The only data source: registry files published by velonx/agent-skills.
-// Fetched at build time. Set AGENT_SKILLS_DIR=../agent-skills to develop against a local checkout.
+// The only data source: files published by velonx/agent-skills, pulled into .registry/ before
+// every dev/build by scripts/pull-registry.mjs (or read from AGENT_SKILLS_DIR, a local checkout).
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { SkillSchema } from "./skill-draft";
-import { SKILLS_RAW } from "./site";
 
 export type Skill = {
   name: string;
@@ -32,12 +31,16 @@ export type Skill = {
 
 export type Category = { id: string; title: string; icon: string; description: string };
 
+const ROOT = process.env.AGENT_SKILLS_DIR || join(process.cwd(), ".registry");
+
+// Only read at build time (every page is prerendered), so keep these files out of server tracing.
 async function loadText(file: string): Promise<string> {
-  const dir = process.env.AGENT_SKILLS_DIR;
-  if (dir) return readFile(join(dir, file), "utf8");
-  const res = await fetch(`${SKILLS_RAW}/${file}`, { cache: "force-cache" });
-  if (!res.ok) throw new Error(`Registry fetch failed: ${file} → ${res.status}`);
-  return res.text();
+  const path = join(/*turbopackIgnore: true*/ ROOT, file);
+  try {
+    return await readFile(/*turbopackIgnore: true*/ path, "utf8");
+  } catch {
+    throw new Error(`Registry file missing: ${path}. Run "npm run registry" (or set AGENT_SKILLS_DIR).`);
+  }
 }
 
 const loadJson = async <T>(file: string): Promise<T> => JSON.parse(await loadText(file));
@@ -63,3 +66,7 @@ export async function getCategories(): Promise<Category[]> {
 
 /** The skill frontmatter JSON Schema — the submit form derives its rules from it. */
 export const getSkillSchema = () => loadJson<SkillSchema>("registry/schema.json");
+
+/** The agent-skills commit this build was made from; null when reading a local checkout. */
+export const getRegistryRevision = async () =>
+  process.env.AGENT_SKILLS_DIR ? null : (await loadText("REVISION")).trim();

@@ -3,7 +3,7 @@ import { Caveat, IBM_Plex_Mono, IBM_Plex_Sans, Patrick_Hand } from "next/font/go
 import { CloseNavOnRouteChange, SlashToSearch } from "@/components/client";
 import { PaperFilters } from "@/components/doodles";
 import { Footer, Header, Sidebar } from "@/components/site";
-import { getCategories } from "@/lib/registry";
+import { getCategories, getRegistryRevision } from "@/lib/registry";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -34,7 +34,7 @@ export const viewport: Viewport = {
 const themeScript = `try{document.documentElement.dataset.theme=localStorage.getItem('vx-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){}`;
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const categories = await getCategories();
+  const [categories, revision] = await Promise.all([getCategories(), getRegistryRevision()]);
   return (
     <html lang="en" suppressHydrationWarning className={`${plexSans.variable} ${plexMono.variable} ${patrick.variable} ${caveat.variable}`}>
       <head>
@@ -50,7 +50,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <Sidebar categories={categories} className="sticky top-[104px] min-h-[calc(100dvh-134px)] self-start max-lg:hidden" />
           <main id="main" className="min-w-0">
             {children}
-            <Footer />
+            <Footer revision={revision} />
           </main>
         </div>
         <div id="mobile-nav" popover="auto" aria-label="Menu">

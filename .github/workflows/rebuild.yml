@@ -1,0 +1,95 @@
+name: Rebuild from registry
+
+# Keeps skills.velonx.com in sync with velonx/agent-skills:
+#  - instantly, when agent-skills sends `registry-updated` (needs SKILLS_WEB_DISPATCH_TOKEN over there)
+#  - hourly as a fallback — only rebuilds if agent-skills/main moved since the last rebuild
+#  - by hand from the Actions tab
+# The build here is a gate: the site is only redeployed if the new registry builds and tests pass.
+on:
+  repository_dispatch:
+    types: [registry-updated]
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+    inputs:
+      only_if_changed:
+        description: "Skip if this agent-skills revision was already rebuilt (what the hourly run does)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rebuild
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.rev.outputs.sha }}
+      rebuild: ${{ steps.decide.outputs.rebuild }}
+    steps:
+      - name: Current agent-skills revision
+        id: rev
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: echo "sha=$(gh api repos/velonx/agent-skills/commits/main --jq .sha)" >> "$GITHUB_OUTPUT"
+
+      - name: Rebuilt for it already?
+        id: seen
+        if: github.event_name == 'schedule' || inputs.only_if_changed
+        uses: actions/cache/restore@v4
+        with:
+          path: .rebuilt
+          key: rebuilt-${{ steps.rev.outputs.sha }}
+          lookup-only: true
+
+      - name: Decide
+        id: decide
+        run: |
+          if [ "${{ steps.seen.outputs.cache-hit }}" = "true" ]; then
+            echo "rebuild=false" >> "$GITHUB_OUTPUT"
+            echo "agent-skills is still at \`${{ steps.rev.outputs.sha }}\` — nothing to rebuild." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "rebuild=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  rebuild:
+    needs: check
+    if: needs.check.outputs.rebuild == 'true'
+    runs-on: ubuntu-latest
+    env:
+      AGENT_SKILLS_REF: ${{ needs.check.outputs.sha }} # build exactly the revision we checked
+      GITHUB_TOKEN: ${{ github.token }}
+      DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run registry
+      - run: npm test
+      - run: npm run build
+
+      - name: Deploy
+        if: env.DEPLOY_HOOK_URL != ''
+        run: curl -fsS -X POST "$DEPLOY_HOOK_URL" -o /dev/null
+
+      - name: Summary
+        run: |
+          {
+            echo "Built skills-web from agent-skills \`${AGENT_SKILLS_REF}\` (trigger: ${{ github.event_name }}${{ github.event.client_payload.sha && format(', pushed {0}', github.event.client_payload.sha) || '' }})."
+            if [ -n "$DEPLOY_HOOK_URL" ]; then echo "Deploy hook called."; else echo "No DEPLOY_HOOK_URL secret yet — build verified, nothing deployed."; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remember this revision
+        run: mkdir -p .rebuilt && echo "$AGENT_SKILLS_REF" > .rebuilt/sha
+      - uses: actions/cache/save@v4
+        continue-on-error: true # already saved by an earlier run for the same revision
+        with:
+          path: .rebuilt
+          key: rebuilt-${{ needs.check.outputs.sha }}

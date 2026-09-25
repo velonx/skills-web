@@ -15,13 +15,14 @@ npm install
 npm run dev          # http://localhost:3000
 ```
 
-The registry is fetched from GitHub (`raw.githubusercontent.com/velonx/agent-skills/main`) at build time. To work against a local checkout of the skills repo instead:
+`npm run dev` and `npm run build` first pull the registry from [velonx/agent-skills](https://github.com/velonx/agent-skills) into `.registry/` (git-ignored) — every file from one commit. To work against a local checkout of the skills repo instead:
 
 ```bash
 AGENT_SKILLS_DIR=../agent-skills npm run dev
 ```
 
 ```bash
+npm run registry     # pull .registry/ (AGENT_SKILLS_REF=<sha> for a specific commit)
 npm run lint
 npm test             # search, SKILL.md parsing, submit-form rules
 npm run build        # prerenders every page as static HTML
@@ -30,12 +31,23 @@ npm run build        # prerenders every page as static HTML
 ## How data flows
 
 ```text
-velonx/agent-skills ── registry/skills.json ──► lib/registry.ts (build time) ──► static pages
+velonx/agent-skills @ commit ─► scripts/pull-registry.mjs ─► .registry/ ─► lib/registry.ts ─► static pages
 ```
 
 - `lib/registry.ts` is the **only** place that loads data. It checks the registry's `version` and throws on an unknown one.
-- No token is needed: the registry is public. If one is ever needed for rate limits, keep it in a server-side env var — never `NEXT_PUBLIC_*`.
-- Rebuilds are triggered when the registry changes. See [ARCHITECTURE.md](https://github.com/velonx/agent-skills/blob/main/ARCHITECTURE.md#f-github--website-sync).
+- The build reads files, not `fetch`, on purpose: Next keeps `fetch` results in `.next/cache` between builds, which would serve a stale registry after an update.
+- The footer shows which agent-skills commit a deployment was built from.
+- No token is needed: the registry is public. `GITHUB_TOKEN` is used in CI only to avoid API rate limits.
+
+## Staying in sync
+
+`.github/workflows/rebuild.yml` rebuilds and redeploys the site when skills change:
+
+- **instantly** on `repository_dispatch: registry-updated`, sent by agent-skills after every merge (needs `SKILLS_WEB_DISPATCH_TOKEN` in agent-skills),
+- **hourly** as a fallback, only if `agent-skills/main` moved since the last rebuild,
+- **by hand** from the Actions tab.
+
+Each run pulls one exact commit, runs tests and a full build, then calls `DEPLOY_HOOK_URL` (a repo secret). Without that secret it only verifies the build. Details: [ARCHITECTURE.md § F](https://github.com/velonx/agent-skills/blob/main/ARCHITECTURE.md#f-github--website-sync).
 
 ## Structure
 
@@ -64,6 +76,8 @@ components/
   client.tsx        NavLink, ThemeToggle, CopyButton, Tabs, TableOfContents, "/" shortcut
   doodles.tsx       Robot, Fern, PaperPlane, SVG paper filters
   Icon.tsx          stroke icon set (skills pick one via metadata.icon)
+scripts/
+  pull-registry.mjs download the registry into .registry/ (runs before dev and build)
 lib/
   registry.ts       types + loaders (server only)
   search.ts         local search, filters and sorting — swap for a search engine later
@@ -94,7 +108,7 @@ A handmade developer notebook: warm paper on sage, hand-written headings (Patric
 
 ## Status
 
-Phases 4–8 of the [plan](https://github.com/velonx/agent-skills/blob/main/ARCHITECTURE.md#h-development-phases) are done: design system, home, skills, skill pages, categories, search and submitting. `/docs` and `/changelog` are still to come and currently show the not-found page.
+Phases 4–9 of the [plan](https://github.com/velonx/agent-skills/blob/main/ARCHITECTURE.md#h-development-phases) are done: design system, home, skills, skill pages, categories, search, submitting and automatic rebuilds. `/docs` and `/changelog` are still to come and currently show the not-found page.
 
 ## License
 

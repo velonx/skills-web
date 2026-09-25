@@ -95,7 +95,7 @@ const FOOTER_LINKS = [
   ["Changelog", "/changelog"],
 ] as const;
 
-export function Footer() {
+export function Footer({ revision }: { revision?: string | null }) {
   return (
     <footer className="mt-10 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-dashed border-ink/20 pt-5 text-[13px] text-ink-2">
       <nav className="flex flex-wrap gap-x-5 gap-y-1.5" aria-label="Footer">
@@ -107,6 +107,17 @@ export function Footer() {
           ),
         )}
       </nav>
+      {revision && (
+        <a
+          href={`${SKILLS_REPO}/commit/${revision}`}
+          className="font-mono text-xs text-muted hover:text-ink hover:underline"
+          title="The agent-skills commit this site was built from"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          registry @ {revision.slice(0, 7)}
+        </a>
+      )}
       <span className="flex items-center gap-1.5 font-hand text-[17px]">
         Maintained by the Velonx open-source community
         <Icon name="heart" className="size-4 fill-heart/25 text-heart" />
