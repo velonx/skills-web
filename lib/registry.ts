@@ -2,6 +2,7 @@
 // Fetched at build time. Set AGENT_SKILLS_DIR=../agent-skills to develop against a local checkout.
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { SkillSchema } from "./skill-draft";
 import { SKILLS_RAW } from "./site";
 
 export type Skill = {
@@ -59,3 +60,6 @@ export const getSkillSource = (skill: Skill) => loadText(skill.path);
 export async function getCategories(): Promise<Category[]> {
   return (await loadJson<{ categories: Category[] }>("registry/categories.json")).categories;
 }
+
+/** The skill frontmatter JSON Schema — the submit form derives its rules from it. */
+export const getSkillSchema = () => loadJson<SkillSchema>("registry/schema.json");

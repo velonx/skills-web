@@ -1,5 +1,9 @@
-import { test } from "node:test";
+import { before, test } from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { SKILLS_RAW } from "./site";
+import { buildSkillMd, emptyDraft, githubNewFileUrl, parseTags, rulesFromSchema, validateDraft, type Rules } from "./skill-draft";
 import type { Skill } from "./registry";
 import { filterSkills, parseFilters } from "./search";
 import { splitSections, stripFrontmatter } from "./markdown";
@@ -69,4 +73,48 @@ test("splitSections: strips title, ignores headings in code, dedupes ids", () =>
   assert.deepEqual(sections.map((s) => s.id), ["usage", "usage-1"]);
   assert.match(sections[0].body, /## Not a heading/);
   assert.equal(sections[1].body, "Again.");
+});
+
+// Tested against the real schema: from AGENT_SKILLS_DIR if set, else the published one.
+let RULES: Rules;
+before(async () => {
+  const dir = process.env.AGENT_SKILLS_DIR;
+  const json = dir
+    ? await readFile(join(dir, "registry/schema.json"), "utf8")
+    : await (await fetch(`${SKILLS_RAW}/registry/schema.json`)).text();
+  RULES = rulesFromSchema(JSON.parse(json));
+});
+const TAKEN = { names: ["web-research"], titles: ["Web Research"] };
+const CAT_IDS = ["research", "other"];
+const good = () => ({
+  ...emptyDraft(),
+  name: "meeting-notes",
+  title: "Meeting Notes",
+  description: 'Turn a transcript into decisions and action items: "who, what, when". Use when asked to summarise a meeting.',
+  category: "other",
+  tags: "Meetings, notes, notes",
+  author: "Ada",
+});
+
+test("draft validation mirrors the schema", () => {
+  assert.deepEqual(validateDraft(good(), RULES, TAKEN, CAT_IDS), {});
+  const e = validateDraft({ ...good(), name: "Web_Research", title: "web research", description: "short <b>", tags: "", platforms: [], license: "GPL-3.0" }, RULES, TAKEN, CAT_IDS);
+  assert.deepEqual(Object.keys(e).sort(), ["description", "license", "name", "platforms", "tags", "title"]);
+  assert.match(validateDraft({ ...good(), name: "web-research" }, RULES, TAKEN, CAT_IDS).name!, /already exists/);
+});
+
+test("generated SKILL.md quotes user text and has every required section", () => {
+  const md = buildSkillMd(good());
+  assert.match(md, /^description: "Turn a transcript into decisions and action items: \\"who, what, when\\"\. Use/m);
+  assert.match(md, /^  tags: \[meetings, notes\]$/m);
+  assert.match(md, /^  version: "1\.0\.0"$/m);
+  for (const s of ["Overview", "When to Use", "Usage", "Examples", "Limitations", "Changelog"]) assert.match(md, new RegExp(`^## ${s}$`, "m"));
+  assert.deepEqual(parseTags(" Web Search , web-search,"), ["web-search"]);
+});
+
+test("GitHub link pre-fills path and content", () => {
+  const url = new URL(githubNewFileUrl("meeting-notes", "hello"));
+  assert.equal(url.pathname, "/velonx/agent-skills/new/main");
+  assert.equal(url.searchParams.get("filename"), "skills/meeting-notes/SKILL.md");
+  assert.equal(url.searchParams.get("value"), "hello");
 });
