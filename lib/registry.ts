@@ -31,26 +31,31 @@ export type Skill = {
 
 export type Category = { id: string; title: string; icon: string; description: string };
 
-async function load<T>(file: string): Promise<T> {
+async function loadText(file: string): Promise<string> {
   const dir = process.env.AGENT_SKILLS_DIR;
-  if (dir) return JSON.parse(await readFile(join(dir, file), "utf8"));
+  if (dir) return readFile(join(dir, file), "utf8");
   const res = await fetch(`${SKILLS_RAW}/${file}`, { cache: "force-cache" });
   if (!res.ok) throw new Error(`Registry fetch failed: ${file} → ${res.status}`);
-  return res.json();
+  return res.text();
 }
 
-export async function getSkills(): Promise<Skill[]> {
-  const { version, skills } = await load<{ version: number; skills: Skill[] }>("registry/skills.json");
+const loadJson = async <T>(file: string): Promise<T> => JSON.parse(await loadText(file));
+
+/** Every skill, deprecated ones included (their pages stay up with a notice). */
+export async function getAllSkills(): Promise<Skill[]> {
+  const { version, skills } = await loadJson<{ version: number; skills: Skill[] }>("registry/skills.json");
   if (version !== 1) throw new Error(`Unsupported registry version ${version}`);
-  return skills.filter((s) => !s.deprecated);
+  return skills;
 }
+
+/** Skills to list and search: deprecated ones hidden. */
+export const getSkills = async () => (await getAllSkills()).filter((s) => !s.deprecated);
+
+export const getSkill = async (name: string) => (await getAllSkills()).find((s) => s.name === name);
+
+/** Raw SKILL.md, frontmatter included. `path` comes from the registry, never from user input. */
+export const getSkillSource = (skill: Skill) => loadText(skill.path);
 
 export async function getCategories(): Promise<Category[]> {
-  return (await load<{ categories: Category[] }>("registry/categories.json")).categories;
+  return (await loadJson<{ categories: Category[] }>("registry/categories.json")).categories;
 }
-
-/** Newest first; skills without a date go last. */
-export const byNewest = (a: Skill, b: Skill) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
-
-export const formatDate = (iso: string | null) =>
-  iso ? new Date(iso + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—";

@@ -23,6 +23,7 @@ AGENT_SKILLS_DIR=../agent-skills npm run dev
 
 ```bash
 npm run lint
+npm test             # search + SKILL.md section parsing
 npm run build        # prerenders every page as static HTML
 ```
 
@@ -40,22 +41,40 @@ velonx/agent-skills ── registry/skills.json ──► lib/registry.ts (build
 
 ```text
 app/
-  layout.tsx        header, sidebar, footer, fonts, metadata, theme script
-  page.tsx          home
-  globals.css       design tokens (light/dark) + paper primitives
+  layout.tsx                 header, sidebar, footer, fonts, metadata, theme script
+  page.tsx                   home
+  skills/page.tsx            all skills: filters, sort, search (state in the URL)
+  skills/[slug]/page.tsx     one static page per skill, built from its SKILL.md
+  categories/page.tsx        category overview
+  categories/[slug]/page.tsx one page per category
+  search/page.tsx            search-first view with keyboard navigation
+  sitemap.ts · robots.ts · not-found.tsx
+  globals.css                design tokens (light/dark) + paper primitives
 components/
   paper.tsx         PaperCard, NotebookSection, Tag, Chip, ButtonLink, GitHubButton
   skill.tsx         SkillTile, SkillBadge, SkillCard, SkillGrid, SkillRow, CategoryCard
+  skill-page.tsx    SkillHeader, SkillMetadata, InstallationBlock, RequirementsBlock, FilesBlock, ContributingBlock
+  SkillBrowser.tsx  filter + search UI shared by /skills, /search and category pages
+  Markdown.tsx      safe SKILL.md rendering (no raw HTML, relative links → GitHub)
   SearchBar.tsx     header + hero search (plain GET form to /search)
   CodeBlock.tsx     CommandLine, CodeBlock
   site.tsx          Header, Sidebar, Footer
-  client.tsx        the only client code: NavLink, ThemeToggle, CopyButton, "/" shortcut
+  client.tsx        NavLink, ThemeToggle, CopyButton, Tabs, TableOfContents, "/" shortcut
   doodles.tsx       Robot, Fern, PaperPlane, SVG paper filters
   Icon.tsx          stroke icon set (skills pick one via metadata.icon)
 lib/
-  registry.ts       types + loaders
-  site.ts           URLs and constants
+  registry.ts       types + loaders (server only)
+  search.ts         local search, filters and sorting — swap for a search engine later
+  markdown.ts       split SKILL.md into sections
+  format.ts         date formatting (client-safe)
+  site.ts           URLs, labels and constants
 ```
+
+## Skill pages
+
+Each `/skills/<name>` page is generated from the skill's own `SKILL.md`: the sections the author wrote (Overview, When to Use, Usage, Examples, Limitations, Changelog…) are rendered in place, and the site adds Installation (per-platform tabs), Requirements & compatibility, Files and Contributing from registry metadata. Add a skill to `agent-skills` and its page appears on the next build — there are no per-skill React files.
+
+Search covers name, title, tags, category, description and author. Every word must match; title and name matches rank highest.
 
 ## Design system
 
@@ -68,7 +87,7 @@ A handmade developer notebook: warm paper on sage, hand-written headings (Patric
 
 ## Status
 
-Phase 4 of the [plan](https://github.com/velonx/agent-skills/blob/main/ARCHITECTURE.md#h-development-phases): design system and home page. Links to `/skills`, `/categories`, `/search`, `/docs`, `/submit` and `/changelog` are placeholders until Phase 5.
+Phases 4–5 of the [plan](https://github.com/velonx/agent-skills/blob/main/ARCHITECTURE.md#h-development-phases) are done: design system, home, skills, skill pages, categories and search. `/docs`, `/submit` and `/changelog` are still to come and currently show the not-found page.
 
 ## License
 

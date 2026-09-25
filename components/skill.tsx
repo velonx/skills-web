@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Category, Skill } from "@/lib/registry";
-import { formatDate } from "@/lib/registry";
+import { formatDate } from "@/lib/format";
 import { Icon } from "./Icon";
 import { PaperCard, Tag } from "./paper";
 

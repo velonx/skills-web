@@ -4,7 +4,8 @@ import { Fern, PaperPlane, Robot } from "@/components/doodles";
 import { ButtonLink, Chip, NotebookSection, PaperCard } from "@/components/paper";
 import { SearchBar } from "@/components/SearchBar";
 import { CategoryCard, SkillGrid, SkillRow } from "@/components/skill";
-import { byNewest, getCategories, getSkills } from "@/lib/registry";
+import { getCategories, getSkills } from "@/lib/registry";
+import { filterSkills } from "@/lib/search";
 import { SKILLS_REPO } from "@/lib/site";
 
 const POPULAR_SEARCHES = ["Web Research", "Code Review", "PDF Analysis", "Data Analysis", "GitHub", "Writing"];
@@ -13,9 +14,9 @@ export default async function Home() {
   const [skills, categories] = await Promise.all([getSkills(), getCategories()]);
   const titleOf = (id: string) => categories.find((c) => c.id === id)?.title;
   const count = (id: string) => skills.filter((s) => s.category === id).length;
-  // No usage data in V1: "popular" means maintainer-featured, topped up with the rest.
-  const popular = [...skills.filter((s) => s.featured), ...skills.filter((s) => !s.featured)].slice(0, 4);
-  const latest = [...skills].sort(byNewest).slice(0, 5);
+  // No usage data in V1: "popular" means maintainer-featured first.
+  const popular = filterSkills(skills, { sort: "popular" }).slice(0, 4);
+  const latest = filterSkills(skills, { sort: "newest" }).slice(0, 5);
   const contributorsUsed = new Set(skills.map((s) => s.author)).size;
 
   return (
