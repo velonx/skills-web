@@ -1,6 +1,6 @@
 name: Rebuild from registry
 
-# Keeps skills.velonx.com in sync with velonx/agent-skills:
+# Keeps aiskills.velonx.in in sync with velonx/agent-skills:
 #  - instantly, when agent-skills sends `registry-updated` (needs SKILLS_WEB_DISPATCH_TOKEN over there)
 #  - hourly as a fallback — only rebuilds if agent-skills/main moved since the last rebuild
 #  - by hand from the Actions tab
@@ -63,7 +63,7 @@ jobs:
     env:
       AGENT_SKILLS_REF: ${{ needs.check.outputs.sha }} # build exactly the revision we checked
       GITHUB_TOKEN: ${{ github.token }}
-      DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
+      DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL || secrets.DEPLOY_HOOK_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

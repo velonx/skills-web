@@ -1,4 +1,4 @@
-export const SITE_URL = "https://skills.velonx.com";
+export const SITE_URL = "https://aiskills.velonx.in";
 export const ORG = "velonx";
 export const SKILLS_REPO = `https://github.com/${ORG}/agent-skills`;
 export const WEB_REPO = `https://github.com/${ORG}/skills-web`;

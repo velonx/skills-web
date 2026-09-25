@@ -30,7 +30,7 @@
     "tsx": "^4.23.15",
     "typescript": "^5"
   },
-  "description": "Website for skills.velonx.com, built from velonx/agent-skills",
+  "description": "Website for aiskills.velonx.in, built from velonx/agent-skills",
   "license": "MIT",
   "engines": {
     "node": ">=20.9"

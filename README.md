@@ -1,6 +1,6 @@
 # Velonx Skills — website
 
-The website for [skills.velonx.com](https://skills.velonx.com): a discoverable interface over [velonx/agent-skills](https://github.com/velonx/agent-skills).
+The website for [aiskills.velonx.in](https://aiskills.velonx.in): a discoverable interface over [velonx/agent-skills](https://github.com/velonx/agent-skills).
 
 This repo has **no skill data of its own**. Everything shown comes from the registry that `agent-skills` publishes (`registry/skills.json` and `registry/categories.json`). To add or change a skill, contribute to [agent-skills](https://github.com/velonx/agent-skills/blob/main/CONTRIBUTING.md).
 
@@ -47,7 +47,7 @@ velonx/agent-skills @ commit ─► scripts/pull-registry.mjs ─► .registry/ 
 - **hourly** as a fallback, only if `agent-skills/main` moved since the last rebuild,
 - **by hand** from the Actions tab.
 
-Each run pulls one exact commit, runs tests and a full build, then calls `DEPLOY_HOOK_URL` (a repo secret). Without that secret it only verifies the build. Details: [ARCHITECTURE.md § F](https://github.com/velonx/agent-skills/blob/main/ARCHITECTURE.md#f-github--website-sync).
+Each run pulls one exact commit, runs tests and a full build, then calls `VERCEL_DEPLOY_HOOK_URL` (a repo secret). Without that secret it only verifies the build. Details: [ARCHITECTURE.md § F](https://github.com/velonx/agent-skills/blob/main/ARCHITECTURE.md#f-github--website-sync).
 
 ## Structure
 
