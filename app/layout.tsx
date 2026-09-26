@@ -19,6 +19,10 @@ export const metadata: Metadata = {
   title: { default: "Velonx Skills — Open-source skills for AI agents", template: "%s — Velonx Skills" },
   description,
   alternates: { canonical: "/" },
+  icons: {
+    icon: "/favicon_io/android-chrome-512x512%20Background%20Removed.png",
+  },
+  manifest: "/favicon_io/site.webmanifest",
   openGraph: { type: "website", siteName: "Velonx Skills", url: SITE_URL, description },
   twitter: { card: "summary_large_image" },
 };
